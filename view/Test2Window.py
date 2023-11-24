@@ -10,32 +10,6 @@ import os
 import cv2
 from sklearn.cluster import KMeans
 
-
-def find_car(input_dir, output_cars ='output.csv'):
-    # input_dir = r'C:\Users\79249\PycharmProjects\pythonProject2\Datasets\datatest'
-    cars, imgs = ['car', 'truck', 'bus'], []
-
-    for file_name in os.listdir(input_dir):
-        imgs.append(cv2.imread(os.path.join(input_dir, file_name)))
-
-    model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
-    results = model(imgs)
-
-    output_folder = 'Datasets/images'
-    os.makedirs(output_folder, exist_ok=True)
-
-    with open(output_cars, 'w', newline='') as f:
-        writer = csv.writer(f)
-
-        for i, file_name in enumerate(os.listdir(input_dir)):
-            res = [n in results.pandas().xyxy[i]['name'].unique() for n in cars]
-            writer.writerow([file_name, bool(sum(res))])
-            if any(res):
-                output_path = os.path.join(output_folder, file_name)
-                cv2.imwrite(output_path, imgs[i])
-                print(f"Фото с машиной сохранено: {output_path}")
-
-
 def extract_colors(image_path, num_colors=3):
     image = cv2.imread(image_path)
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -51,8 +25,43 @@ class MyApplication(QWidget):
 
         self.init_ui()
 
+    def find_car(self, input_dir, output_cars='output.csv'):
+        # input_dir = r'C:\Users\79249\PycharmProjects\pythonProject2\Datasets\datatest'
+        cars, imgs = ['car', 'truck', 'bus'], []
+
+        for file_name in os.listdir(input_dir):
+            imgs.append(cv2.imread(os.path.join(input_dir, file_name)))
+
+        model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+        results = model(imgs)
+
+        output_folder = 'Datasets/images'
+        os.makedirs(output_folder, exist_ok=True)
+
+        with open(output_cars, 'w', newline='') as f:
+            writer = csv.writer(f)
+
+            for i, file_name in enumerate(os.listdir(input_dir)):
+                res = [n in results.pandas().xyxy[i]['name'].unique() for n in cars]
+                has_car = bool(sum(res))
+                writer.writerow([file_name, has_car])
+
+                if has_car:
+                    output_path = os.path.join(output_folder, file_name)
+                    cv2.imwrite(output_path, imgs[i])
+                    print(f"Фото с машиной сохранено: {output_path}")
+
+                    # Получаем информацию о текущем изображении
+                    image_path = os.path.join(input_dir, file_name)
+                    image = Image.open(image_path)
+                    width, height = image.size
+                    size_in_bytes = os.path.getsize(image_path)
+                    size_in_mbytes = float(size_in_bytes / 1048576)
+                    self.update_table(file_name, width, height, size_in_mbytes)
+
     def findcar_onimage(self):
-        find_car('datatest')
+        self.find_car('datatest')
+
     def detectButtonClicked(self):
         selected_index = self.table_view.selectionModel().currentIndex()
         if selected_index.isValid():
@@ -117,34 +126,17 @@ class MyApplication(QWidget):
 
     def view_result(self):
         folder_path = QFileDialog.getExistingDirectory(self, 'Выберите папку с изображениями')
-
         if folder_path:
-            find_car(folder_path)
-            self.update_table(folder_path)
+            self.find_car(folder_path)
 
 
-    def update_table(self, folder_path):
-        # Очищаем таблицу
-        self.model.removeRows(0, self.model.rowCount())
-
-        # Получаем список файлов в выбранной папке
-        files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
-
-        # Заполняем таблицу информацией о каждом изображении
-        for file in files:
-            file_path = os.path.join(folder_path, file)
-            image = Image.open(file_path)
-            width, height = image.size
-            size_in_bytes = os.path.getsize(file_path)
-            size_in_mbytes = float(size_in_bytes / 1048576)
-
-
-            # Добавляем данные в таблицу
-            row_position = self.model.rowCount()
-            self.model.insertRow(row_position)
-            self.model.setItem(row_position, 0, QStandardItem(file))
-            self.model.setItem(row_position, 1, QStandardItem(f"{width}x{height}"))
-            self.model.setItem(row_position, 2, QStandardItem(f"{round(size_in_mbytes, 1)} Mbytes"))
+    def update_table(self, file_name, width, height, size_in_mbytes):
+        # Добавляем данные в таблицу
+        row_position = self.model.rowCount()
+        self.model.insertRow(row_position)
+        self.model.setItem(row_position, 0, QStandardItem(file_name))
+        self.model.setItem(row_position, 1, QStandardItem(f"{width}x{height}"))
+        self.model.setItem(row_position, 2, QStandardItem(f"{round(size_in_mbytes, 1)} Mbytes"))
 
     def detect(self):
         print('Кнопка "Детекция" нажата!')
