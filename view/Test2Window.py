@@ -71,48 +71,32 @@ class MyApplication(QWidget):
         # Создаем модель данных для QTableView
         self.model = QStandardItemModel(0, 3)
         self.model.setHorizontalHeaderLabels(["Название", "Разрешение", "Вес"])
-
         self.result_label = QLabel("Выбранная запись:")
-        # Создаем QTableView
-
         self.table_view = QTableView()
         self.table_view.setModel(self.model)
-
-        # Создаем три кнопки
         btn_view_result = QPushButton('Просмотреть результат', self)
         btn_detection = QPushButton('Детекция', self)
         btn_exit = QPushButton('Выход', self)
         detect_button = QPushButton("Detect")
         find_button = QPushButton("Find Car")
-
-        # Подключаем обработчики событий для кнопок
         btn_view_result.clicked.connect(self.view_result)
         btn_detection.clicked.connect(self.detect)
         btn_exit.clicked.connect(self.exit_app)
         detect_button.clicked.connect(self.detectButtonClicked)
         find_button.clicked.connect(self.findcar_onimage)
-
-        # Создаем горизонтальный макет для кнопок
         button_layout = QHBoxLayout()
         button_layout.addWidget(btn_view_result)
         button_layout.addWidget(btn_detection)
         button_layout.addWidget(btn_exit)
         button_layout.addWidget(detect_button)
         button_layout.addWidget(find_button)
-
-        # Создаем вертикальный макет для основного окна
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.table_view)
         main_layout.addLayout(button_layout)
         main_layout.addWidget(self.result_label)
-        # Устанавливаем макет в основное окно
         self.setLayout(main_layout)
-
-        # Устанавливаем размеры окна
         self.setFixedSize(1200, 700)
         self.setWindowTitle('Приложение с QTableView')
-
-        # Отображаем окно
         self.show()
 
     def view_result(self):
