@@ -11,24 +11,26 @@ import cv2
 from sklearn.cluster import KMeans
 
 
-def extract_colors(image_path, num_colors=1):
-    image = cv2.imread(image_path)
-    model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
-    results = model(image)
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    pixels = image_rgb.reshape((-1, 3))
-    kmeans = KMeans(n_clusters=num_colors)
-    kmeans.fit(pixels)
-    dominant_colors = kmeans.cluster_centers_.astype(int)
-    results.show()
-    return dominant_colors
-
-
 class MyApplication(QWidget):
     def __init__(self):
         super().__init__()
 
         self.init_ui()
+
+    def extract_colors(self, image_path, num_colors=1):
+        image = cv2.imread(image_path)
+        model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        results = model(image_rgb)
+        pixels = image_rgb.reshape((-1, 3))
+        kmeans = KMeans(n_clusters=num_colors)
+        kmeans.fit(pixels)
+        dominant_colors = kmeans.cluster_centers_.astype(int)
+        results.show()
+        color_bar, color = self.calc_metric(image, 100, 600, 900, 250)
+        cv2.imshow('Цвет', color_bar)
+        cv2.waitKey(0)
+        return dominant_colors
 
     def find_car(self, input_dir, output_cars='output.csv'):
         cars, imgs = ['car', 'truck', 'bus'], []
@@ -62,12 +64,12 @@ class MyApplication(QWidget):
         selected_index = self.table_view.selectionModel().currentIndex()
         if selected_index.isValid():
             selected_data = selected_index.siblingAtColumn(0).data()
-            image_path = rf'C:\Users\79249\PycharmProjects\pythonProject2\view\Datasets\images\{selected_data}'
-            dominant_colors = extract_colors(image_path)
+            image_path = f'../Datasets/datatest/{selected_data}'
+            dominant_colors = self.extract_colors(image_path)
             print("Dominant Colors:")
             for color in dominant_colors:
                 print(f"RGB: {color}")
-            message = f"{selected_data}\n" + str(dominant_colors)
+            message = f"{selected_data}\n" + "Доминирующий цвет: " + str(dominant_colors)
             self.result_label.setText(f"Выбранная запись: {message}")
         else:
             self.result_label.setText("Выберите строку в таблице")
@@ -78,29 +80,28 @@ class MyApplication(QWidget):
         self.result_label = QLabel("Выбранная запись:")
         self.table_view = QTableView()
         self.table_view.setModel(self.model)
-        btn_view_result = QPushButton('Просмотреть результат', self)
-        btn_detection = QPushButton('Детекция', self)
+        btn_view_result = QPushButton('Выбрать директорию', self)
+        # btn_detection = QPushButton('Просмотреть', self)
         btn_exit = QPushButton('Выход', self)
-        detect_button = QPushButton("Detect")
+        detect_button = QPushButton("Просмотреть)")
         find_button = QPushButton("Find Car")
         btn_view_result.clicked.connect(self.view_result)
-        btn_detection.clicked.connect(self.detect)
+        # btn_detection.clicked.connect(self.detect)
         btn_exit.clicked.connect(self.exit_app)
         detect_button.clicked.connect(self.detectButtonClicked)
         find_button.clicked.connect(self.findcar_onimage)
         button_layout = QHBoxLayout()
         button_layout.addWidget(btn_view_result)
-        button_layout.addWidget(btn_detection)
-        button_layout.addWidget(btn_exit)
+        # button_layout.addWidget(btn_detection)
         button_layout.addWidget(detect_button)
-        button_layout.addWidget(find_button)
+        button_layout.addWidget(btn_exit)
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.table_view)
         main_layout.addLayout(button_layout)
         main_layout.addWidget(self.result_label)
         self.setLayout(main_layout)
         self.setFixedSize(1200, 700)
-        self.setWindowTitle('Приложение с QTableView')
+        self.setWindowTitle('WipeMyTearsCV')
         self.show()
 
     def view_result(self):
@@ -120,31 +121,26 @@ class MyApplication(QWidget):
         selected_index = self.table_view.selectionModel().currentIndex()
         if selected_index.isValid():
             selected_data = selected_index.siblingAtColumn(0).data()
-            image_path = rf'C:\Users\79249\PycharmProjects\pythonProject2\view\Datasets\images\{selected_data}'
+            image_path = f'../view/Datasets/{selected_data}'
             img = cv2.imread(image_path)
             color_bar, color = self.calc_metric(img, 100, 600, 900, 250)
-            cv2.imshow('Color bar', color_bar)
+            cv2.imshow('Цвет', color_bar)
             cv2.waitKey(0)
 
     def create_bar(self, height, width, color):
         bar = np.zeros((height, width, 3), np.uint8)
         bar[:] = color
         red, green, blue = int(color[2]), int(color[1]), int(color[0])
-
         return bar, (red, green, blue)
 
     def calc_metric(self, image, x, y, w, h):
         # image = image[(y - h):y, x:(x + w)]
-        cv2.imshow('Image', image)
         data = np.float32(image).reshape((-1, 3))
-
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
         ret, label, center = cv2.kmeans(data, 2, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
         percentages = (np.unique(label, return_counts=True)[1]) / data.shape[0]
-
         bar, color = self.create_bar(400, 400, center[np.argmax(percentages)])
         img_bar = np.hstack((bar,))
-
         return img_bar, color
 
     def exit_app(self):
