@@ -2,9 +2,10 @@ import csv
 import sys
 import numpy as np
 import torch
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QTableView, QPushButton, QHBoxLayout, QFileDialog, \
     QLabel
-from PyQt6.QtGui import QStandardItemModel, QStandardItem
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QImage, QPixmap
 from PIL import Image
 import os
 import cv2
@@ -55,7 +56,7 @@ class MyApplication(QWidget):
                     width, height = image.size
                     size_in_bytes = os.path.getsize(image_path)
                     size_in_mbytes = float(size_in_bytes / 1048576)
-                    self.update_table(file_name, width, height, size_in_mbytes)
+                    self.update_table(file_name, width, height, size_in_mbytes, input_dir)
 
     def findcar_onimage(self):
         self.find_car('datatest')
@@ -109,13 +110,21 @@ class MyApplication(QWidget):
         if folder_path:
             self.find_car(folder_path)
 
-    def update_table(self, file_name, width, height, size_in_mbytes):
+    def update_table(self, file_name, width, height, size_in_mbytes, image_path):
         # Добавляем данные в таблицу
         row_position = self.model.rowCount()
         self.model.insertRow(row_position)
-        self.model.setItem(row_position, 0, QStandardItem(file_name))
+        img = image_path + '/' + file_name
+        image_item = QImage(img)
+        pixmap = QPixmap.fromImage(image_item)
+        label = QLabel()
+        label.setPixmap(pixmap.scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio))
+        self.table_view.setIndexWidget(self.model.index(row_position, 0), label)
         self.model.setItem(row_position, 1, QStandardItem(f"{width}x{height}"))
         self.model.setItem(row_position, 2, QStandardItem(f"{round(size_in_mbytes, 1)} Mbytes"))
+        self.table_view.setColumnWidth(0, 500)
+        self.table_view.setRowHeight(row_position, 300)
+        print('hi')
 
     def detect(self):
         selected_index = self.table_view.selectionModel().currentIndex()
