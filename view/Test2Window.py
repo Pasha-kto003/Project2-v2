@@ -64,9 +64,9 @@ class MyApplication(QWidget):
     def detectButtonClicked(self):
         selected_index = self.table_view.selectionModel().currentIndex()
         if selected_index.isValid():
-            selected_data = selected_index.siblingAtColumn(0).data()
+            selected_data = selected_index.siblingAtColumn(3).data(Qt.ItemDataRole.DisplayRole)
             image_path = f'../Datasets/datatest/{selected_data}'
-            dominant_colors = self.extract_colors(image_path)
+            dominant_colors = self.extract_colors(image_path, num_colors=1)
             print("Dominant Colors:")
             for color in dominant_colors:
                 print(f"RGB: {color}")
@@ -77,7 +77,7 @@ class MyApplication(QWidget):
 
     def init_ui(self):
         self.model = QStandardItemModel(0, 3)
-        self.model.setHorizontalHeaderLabels(["Название", "Разрешение", "Вес"])
+        self.model.setHorizontalHeaderLabels(["Фото", "Разрешение", "Вес"])
         self.result_label = QLabel("Выбранная запись:")
         self.table_view = QTableView()
         self.table_view.setModel(self.model)
@@ -122,9 +122,10 @@ class MyApplication(QWidget):
         self.table_view.setIndexWidget(self.model.index(row_position, 0), label)
         self.model.setItem(row_position, 1, QStandardItem(f"{width}x{height}"))
         self.model.setItem(row_position, 2, QStandardItem(f"{round(size_in_mbytes, 1)} Mbytes"))
+        self.model.setItem(row_position, 3, QStandardItem(f"{file_name}"))
         self.table_view.setColumnWidth(0, 500)
         self.table_view.setRowHeight(row_position, 300)
-        print('hi')
+        self.table_view.setColumnHidden(3, True)
 
     def detect(self):
         selected_index = self.table_view.selectionModel().currentIndex()
