@@ -15,8 +15,26 @@ from sklearn.cluster import KMeans
 class MyApplication(QWidget):
     def __init__(self):
         super().__init__()
+        style_sheet = """
+            QTableView {
+                background-color: #FCBABA;
+                border: 2px solid red;
+                border-radius: 10px;
+                gridline-color: #fd0000;
+                
+            }
 
+            QTableView::item {
+                padding: 5px;
+            }
+
+            QTableView::item:selected {
+                background-color: #a6a6a6;
+                color: #ffffff;
+            }
+        """
         self.init_ui()
+        self.table_view.setStyleSheet(style_sheet)
 
     def extract_colors(self, image_path, num_colors=1):
         image = cv2.imread(image_path)
@@ -76,6 +94,22 @@ class MyApplication(QWidget):
             self.result_label.setText("Выберите строку в таблице")
 
     def init_ui(self):
+        button_sheet = """
+            QPushButton {
+                background-color: #FCBABA;
+                border: 2px solid red;
+                border-radius: 10px;
+                padding: 5px 10px;
+            }
+
+            QPushButton:hover {
+                background-color: #FAD9D9;
+            }
+
+            QPushButton:pressed {
+                background-color: #F79E9E;
+            }
+        """
         self.model = QStandardItemModel(0, 3)
         self.model.setHorizontalHeaderLabels(["Фото", "Разрешение", "Вес"])
         self.result_label = QLabel("Выбранная запись:")
@@ -86,6 +120,12 @@ class MyApplication(QWidget):
         btn_exit = QPushButton('Выход', self)
         detect_button = QPushButton("Просмотреть)")
         find_button = QPushButton("Find Car")
+
+        detect_button.setStyleSheet(button_sheet)
+        find_button.setStyleSheet(button_sheet)
+        btn_exit.setStyleSheet(button_sheet)
+        btn_view_result.setStyleSheet(button_sheet)
+
         btn_view_result.clicked.connect(self.view_result)
         # btn_detection.clicked.connect(self.detect)
         btn_exit.clicked.connect(self.exit_app)
@@ -100,6 +140,12 @@ class MyApplication(QWidget):
         main_layout.addWidget(self.table_view)
         main_layout.addLayout(button_layout)
         main_layout.addWidget(self.result_label)
+        style_sheet = """
+            main_layout {
+                background-color: #FCBABA;
+            }
+        """
+        self.setStyleSheet(style_sheet)
         self.setLayout(main_layout)
         self.setFixedSize(1200, 700)
         self.setWindowTitle('WipeMyTearsCV')
