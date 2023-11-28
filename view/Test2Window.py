@@ -5,7 +5,7 @@ import torch
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QTableView, QPushButton, QHBoxLayout, QFileDialog, \
     QLabel
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QImage, QPixmap
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QImage, QPixmap, QColor
 from PIL import Image
 import os
 import cv2
@@ -90,6 +90,14 @@ class MyApplication(QWidget):
                 print(f"RGB: {color}")
             message = f"{selected_data}\n" + "Доминирующий цвет: " + str(dominant_colors)
             self.result_label.setText(f"Выбранная запись: {message}")
+            color = dominant_colors[0]
+            color = [min(max(c, 0), 255) for c in color]
+            color_string = '#{:02x}{:02x}{:02x}'.format(color[0], color[1], color[2])
+            print(color_string)
+
+            pixmap = QPixmap(50, 50)  # Размер квадрата (50x50)
+            pixmap.fill(QColor(color_string))
+            self.color_square_label.setPixmap(pixmap)
         else:
             self.result_label.setText("Выберите строку в таблице")
 
@@ -121,6 +129,7 @@ class MyApplication(QWidget):
         detect_button = QPushButton("Просмотреть)")
         find_button = QPushButton("Find Car")
 
+
         detect_button.setStyleSheet(button_sheet)
         find_button.setStyleSheet(button_sheet)
         btn_exit.setStyleSheet(button_sheet)
@@ -140,6 +149,8 @@ class MyApplication(QWidget):
         main_layout.addWidget(self.table_view)
         main_layout.addLayout(button_layout)
         main_layout.addWidget(self.result_label)
+        self.color_square_label = QLabel()
+        main_layout.addWidget(self.color_square_label)
         style_sheet = """
             main_layout {
                 background-color: #FCBABA;
@@ -147,7 +158,7 @@ class MyApplication(QWidget):
         """
         self.setStyleSheet(style_sheet)
         self.setLayout(main_layout)
-        self.setFixedSize(1200, 700)
+        self.setFixedSize(1200, 800)
         self.setWindowTitle('WipeMyTearsCV')
         self.show()
 
