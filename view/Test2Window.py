@@ -4,12 +4,14 @@ import numpy as np
 import torch
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QTableView, QPushButton, QHBoxLayout, QFileDialog, \
-    QLabel
+    QLabel, QDialog
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QImage, QPixmap, QColor
 from PIL import Image
 import os
 import cv2
 from sklearn.cluster import KMeans
+
+from view.ModalWindow import ImageInfoDialog
 
 
 class MyApplication(QWidget):
@@ -40,12 +42,12 @@ class MyApplication(QWidget):
         image = cv2.imread(image_path)
         model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = model(image_rgb)
+        # results = model(image_rgb)
         pixels = image_rgb.reshape((-1, 3))
         kmeans = KMeans(n_clusters=num_colors)
         kmeans.fit(pixels)
         dominant_colors = kmeans.cluster_centers_.astype(int)
-        results.show()
+        # results.show()
         color_bar, color = self.calc_metric(image, 100, 600, 900, 250)
         cv2.imshow('Цвет', color_bar)
         cv2.waitKey(0)
@@ -98,6 +100,10 @@ class MyApplication(QWidget):
             pixmap = QPixmap(50, 50)  # Размер квадрата (50x50)
             pixmap.fill(QColor(color_string))
             self.color_square_label.setPixmap(pixmap)
+
+            image_info_dialog = ImageInfoDialog(image_path, dominant_colors, selected_data)
+            image_info_dialog.exec()
+            image_info_dialog.open()
         else:
             self.result_label.setText("Выберите строку в таблице")
 
