@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QVBoxLayout, \
     QLabel, QDialog
 from PyQt6.QtGui import QPixmap, QColor
 import cv2
+import numpy as np
 
 
 class ImageInfoDialog(QDialog):
@@ -12,6 +13,7 @@ class ImageInfoDialog(QDialog):
 
         self.setWindowTitle("Информация о картинке")
         layout = QVBoxLayout()
+        # self.layout.setStyleSheet("QVBoxLayout { border: 2px solid #C53D46; }")
         image_label = QLabel()
 
         model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
@@ -20,6 +22,7 @@ class ImageInfoDialog(QDialog):
         new_path = '../view/AiTest/'
         results = model(image_rgb)
         output_image = results.render()[0]
+        # results.show()
         cv2.imwrite(new_path + file_name, cv2.cvtColor(output_image, cv2.COLOR_RGB2BGR))
         img_path = new_path + file_name
         pixmap = QPixmap(img_path)
@@ -35,7 +38,7 @@ class ImageInfoDialog(QDialog):
         color_string = '#{:02x}{:02x}{:02x}'.format(color[0], color[1], color[2])
         print(color_string)
 
-        pixmap = QPixmap(50, 50)
+        pixmap = QPixmap(400, 400)
         pixmap.fill(QColor(color_string))
 
         self.color_square_label.setPixmap(pixmap)

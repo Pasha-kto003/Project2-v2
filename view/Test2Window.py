@@ -38,19 +38,23 @@ class MyApplication(QWidget):
         self.init_ui()
         self.table_view.setStyleSheet(style_sheet)
 
-    def extract_colors(self, image_path, num_colors=1):
-        image = cv2.imread(image_path)
+    def extract_colors(self, image_path, num_colors=2):
         model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+        image = cv2.imread(image_path)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        # results = model(image_rgb)
-        pixels = image_rgb.reshape((-1, 3))
+        results = model(image_rgb)
+        boxes = results.xyxy[0][:, :4].cpu().numpy()
+        classes = results.xyxy[0][:, 5].cpu().numpy()
+        car_boxes = boxes[classes == 2]
+        car_pixels = []
+        for box in car_boxes:
+            x, y, x2, y2 = box.astype(int)
+            car_pixels.extend(image_rgb[y:y2, x:x2])
+        car_pixels = np.array(car_pixels).reshape((-1, 3))
         kmeans = KMeans(n_clusters=num_colors)
-        kmeans.fit(pixels)
+        kmeans.fit(car_pixels)
         dominant_colors = kmeans.cluster_centers_.astype(int)
-        # results.show()
-        color_bar, color = self.calc_metric(image, 100, 600, 900, 250)
-        cv2.imshow('Цвет', color_bar)
-        cv2.waitKey(0)
+
         return dominant_colors
 
     def find_car(self, input_dir, output_cars='output.csv'):
@@ -135,7 +139,6 @@ class MyApplication(QWidget):
         detect_button = QPushButton("Просмотреть)")
         find_button = QPushButton("Find Car")
 
-
         detect_button.setStyleSheet(button_sheet)
         find_button.setStyleSheet(button_sheet)
         btn_exit.setStyleSheet(button_sheet)
@@ -189,16 +192,6 @@ class MyApplication(QWidget):
         self.table_view.setColumnWidth(0, 500)
         self.table_view.setRowHeight(row_position, 300)
         self.table_view.setColumnHidden(3, True)
-
-    def detect(self):
-        selected_index = self.table_view.selectionModel().currentIndex()
-        if selected_index.isValid():
-            selected_data = selected_index.siblingAtColumn(0).data()
-            image_path = f'../view/Datasets/{selected_data}'
-            img = cv2.imread(image_path)
-            color_bar, color = self.calc_metric(img, 100, 600, 900, 250)
-            cv2.imshow('Цвет', color_bar)
-            cv2.waitKey(0)
 
     def create_bar(self, height, width, color):
         bar = np.zeros((height, width, 3), np.uint8)
