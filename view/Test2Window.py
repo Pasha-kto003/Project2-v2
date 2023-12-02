@@ -38,23 +38,13 @@ class MyApplication(QWidget):
         self.init_ui()
         self.table_view.setStyleSheet(style_sheet)
 
-    def extract_colors(self, image_path, num_colors=2):
-        model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+    def extract_colors(self, image_path, num_colors=3):
         image = cv2.imread(image_path)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = model(image_rgb)
-        boxes = results.xyxy[0][:, :4].cpu().numpy()
-        classes = results.xyxy[0][:, 5].cpu().numpy()
-        car_boxes = boxes[classes == 2]
-        car_pixels = []
-        for box in car_boxes:
-            x, y, x2, y2 = box.astype(int)
-            car_pixels.extend(image_rgb[y:y2, x:x2])
-        car_pixels = np.array(car_pixels).reshape((-1, 3))
+        pixels = image_rgb.reshape((-1, 3))
         kmeans = KMeans(n_clusters=num_colors)
-        kmeans.fit(car_pixels)
+        kmeans.fit(pixels)
         dominant_colors = kmeans.cluster_centers_.astype(int)
-
         return dominant_colors
 
     def find_car(self, input_dir, output_cars='output.csv'):
@@ -90,20 +80,20 @@ class MyApplication(QWidget):
         if selected_index.isValid():
             selected_data = selected_index.siblingAtColumn(3).data(Qt.ItemDataRole.DisplayRole)
             image_path = f'../Datasets/datatest/{selected_data}'
-            dominant_colors = self.extract_colors(image_path, num_colors=1)
+            dominant_colors = self.extract_colors(image_path, num_colors=3)
             print("Dominant Colors:")
             for color in dominant_colors:
                 print(f"RGB: {color}")
             message = f"{selected_data}\n" + "Доминирующий цвет: " + str(dominant_colors)
             self.result_label.setText(f"Выбранная запись: {message}")
-            color = dominant_colors[0]
-            color = [min(max(c, 0), 255) for c in color]
-            color_string = '#{:02x}{:02x}{:02x}'.format(color[0], color[1], color[2])
-            print(color_string)
-
-            pixmap = QPixmap(50, 50)  # Размер квадрата (50x50)
-            pixmap.fill(QColor(color_string))
-            self.color_square_label.setPixmap(pixmap)
+            for i in dominant_colors:
+                color = i
+                color = [min(max(c, 0), 255) for c in color]
+                color_string = '#{:02x}{:02x}{:02x}'.format(color[0], color[1], color[2])
+                print(color_string)
+                pixmap = QPixmap(50, 50)
+                pixmap.fill(QColor(color_string))
+                self.color_square_label.setPixmap(pixmap)
 
             image_info_dialog = ImageInfoDialog(image_path, dominant_colors, selected_data)
             image_info_dialog.exec()
@@ -174,10 +164,10 @@ class MyApplication(QWidget):
     def view_result(self):
         folder_path = QFileDialog.getExistingDirectory(self, 'Выберите папку с изображениями')
         if folder_path:
+            self.model.removeRows(0, self.model.rowCount())
             self.find_car(folder_path)
 
     def update_table(self, file_name, width, height, size_in_mbytes, image_path):
-        # Добавляем данные в таблицу
         row_position = self.model.rowCount()
         self.model.insertRow(row_position)
         img = image_path + '/' + file_name
@@ -192,22 +182,6 @@ class MyApplication(QWidget):
         self.table_view.setColumnWidth(0, 500)
         self.table_view.setRowHeight(row_position, 300)
         self.table_view.setColumnHidden(3, True)
-
-    def create_bar(self, height, width, color):
-        bar = np.zeros((height, width, 3), np.uint8)
-        bar[:] = color
-        red, green, blue = int(color[2]), int(color[1]), int(color[0])
-        return bar, (red, green, blue)
-
-    def calc_metric(self, image, x, y, w, h):
-        # image = image[(y - h):y, x:(x + w)]
-        data = np.float32(image).reshape((-1, 3))
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-        ret, label, center = cv2.kmeans(data, 2, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-        percentages = (np.unique(label, return_counts=True)[1]) / data.shape[0]
-        bar, color = self.create_bar(400, 400, center[np.argmax(percentages)])
-        img_bar = np.hstack((bar,))
-        return img_bar, color
 
     def exit_app(self):
         sys.exit()

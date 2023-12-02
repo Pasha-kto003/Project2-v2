@@ -26,21 +26,18 @@ class ImageInfoDialog(QDialog):
         cv2.imwrite(new_path + file_name, cv2.cvtColor(output_image, cv2.COLOR_RGB2BGR))
         img_path = new_path + file_name
         pixmap = QPixmap(img_path)
-        image_label.setPixmap(pixmap.scaled(800, 800, Qt.AspectRatioMode.KeepAspectRatio))
+        image_label.setPixmap(pixmap.scaled(800, 500, Qt.AspectRatioMode.KeepAspectRatio))
         layout.addWidget(image_label)
-
-        self.color_square_label = QLabel()
-        layout.addWidget(self.color_square_label)
-
         color_info_label = QLabel(f"Доминирующий цвет: {dominant_colors}")
-        color = dominant_colors[0]
-        color = [min(max(c, 0), 255) for c in color]
-        color_string = '#{:02x}{:02x}{:02x}'.format(color[0], color[1], color[2])
-        print(color_string)
-
-        pixmap = QPixmap(400, 400)
-        pixmap.fill(QColor(color_string))
-
-        self.color_square_label.setPixmap(pixmap)
+        for i in dominant_colors:
+            color = i
+            self.color_square_label = QLabel()
+            layout.addWidget(self.color_square_label)
+            color = [min(max(c, 0), 255) for c in color]
+            color_string = '#{:02x}{:02x}{:02x}'.format(color[0], color[1], color[2])
+            print(color_string)
+            pixmap = QPixmap(100, 100)
+            pixmap.fill(QColor(color_string))
+            self.color_square_label.setPixmap(pixmap)
         layout.addWidget(color_info_label)
         self.setLayout(layout)
