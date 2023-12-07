@@ -4,13 +4,12 @@ import numpy as np
 import torch
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QTableView, QPushButton, QHBoxLayout, QFileDialog, \
-    QLabel, QDialog
+    QLabel, QMessageBox
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QImage, QPixmap, QColor
 from PIL import Image
 import os
 import cv2
 from sklearn.cluster import KMeans
-
 from view.ModalWindow import ImageInfoDialog
 
 
@@ -38,13 +37,41 @@ class MyApplication(QWidget):
         self.init_ui()
         self.table_view.setStyleSheet(style_sheet)
 
-    def extract_colors(self, image_path, num_colors=3):
+    def extract_colors(self, image_path, num_colors=2):
+        model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
         image = cv2.imread(image_path)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        pixels = image_rgb.reshape((-1, 3))
-        kmeans = KMeans(n_clusters=num_colors)
-        kmeans.fit(pixels)
-        dominant_colors = kmeans.cluster_centers_.astype(int)
+        results = model(image_rgb)
+        boxes = results.xyxy[0][:, :4].cpu().numpy()
+        classes = results.xyxy[0][:, 5].cpu().numpy()
+        car_boxes = boxes[classes == 2]
+        car_boxes1 = boxes[classes == 3]
+        car_boxes2 = boxes[classes == 7]
+        car_pixels = []
+        try:
+            if boxes[classes == 2].any():
+                for box in car_boxes:
+                    x, y, x2, y2 = box.astype(int)
+                    car_pixels.extend(image_rgb[y:y2, x:x2])
+            if boxes[classes == 3].any():
+                for box in car_boxes1:
+                    x, y, x2, y2 = box.astype(int)
+                    car_pixels.extend(image_rgb[y:y2, x:x2])
+            if boxes[classes == 7].any():
+                for box in car_boxes2:
+                    x, y, x2, y2 = box.astype(int)
+                    car_pixels.extend(image_rgb[y:y2, x:x2])
+            car_pixels = np.array(car_pixels).reshape((-1, 3))
+            kmeans = KMeans(n_clusters=num_colors)
+            kmeans.fit(car_pixels)
+            dominant_colors = kmeans.cluster_centers_.astype(int)
+        except:
+            pixels = image_rgb.reshape((-1, 3))
+            kmeans = KMeans(n_clusters=num_colors)
+            kmeans.fit(pixels)
+            dominant_colors = kmeans.cluster_centers_.astype(int)
+            return dominant_colors
+
         return dominant_colors
 
     def find_car(self, input_dir, output_cars='output.csv'):
@@ -55,22 +82,31 @@ class MyApplication(QWidget):
         results = model(imgs)
         output_folder = 'Datasets/images'
         os.makedirs(output_folder, exist_ok=True)
-        with open(output_cars, 'w', newline='') as f:
-            writer = csv.writer(f)
-            for i, file_name in enumerate(os.listdir(input_dir)):
-                res = [n in results.pandas().xyxy[i]['name'].unique() for n in cars]
-                has_car = bool(sum(res))
-                writer.writerow([file_name, has_car])
-                if has_car:
-                    output_path = os.path.join(output_folder, file_name)
-                    cv2.imwrite(output_path, imgs[i])
-                    print(f"Фото с машиной сохранено: {output_path}")
-                    image_path = os.path.join(input_dir, file_name)
-                    image = Image.open(image_path)
-                    width, height = image.size
-                    size_in_bytes = os.path.getsize(image_path)
-                    size_in_mbytes = float(size_in_bytes / 1048576)
-                    self.update_table(file_name, width, height, size_in_mbytes, input_dir)
+        try:
+            with open(output_cars, 'w', newline='') as f:
+                writer = csv.writer(f)
+                for i, file_name in enumerate(os.listdir(input_dir)):
+                    res = [n in results.pandas().xyxy[i]['name'].unique() for n in cars]
+                    has_car = bool(sum(res))
+                    writer.writerow([file_name, has_car])
+                    if has_car:
+                        output_path = os.path.join(output_folder, file_name)
+                        cv2.imwrite(output_path, imgs[i])
+                        print(f"Фото с машиной сохранено: {output_path}")
+                        image_path = os.path.join(input_dir, file_name)
+                        image = Image.open(image_path)
+                        width, height = image.size
+                        size_in_bytes = os.path.getsize(image_path)
+                        size_in_mbytes = float(size_in_bytes / 1048576)
+                        self.update_table(file_name, width, height, size_in_mbytes, input_dir)
+        except:
+            message = QMessageBox()
+            message.setIcon(QMessageBox.Icon.Warning)
+            message.setFixedWidth(500)
+            message.setFixedHeight(300)
+            message.setWindowTitle("Ошибка")
+            message.setText('Ошибка при обработке изображений')
+            message.exec()
 
     def findcar_onimage(self):
         self.find_car('datatest')
@@ -99,6 +135,13 @@ class MyApplication(QWidget):
             image_info_dialog.exec()
             image_info_dialog.open()
         else:
+            message = QMessageBox()
+            message.setIcon(QMessageBox.Icon.Warning)
+            message.setFixedWidth(500)
+            message.setFixedHeight(300)
+            message.setWindowTitle("Ошибка")
+            message.setText('Вы не выбрали запись')
+            message.exec()
             self.result_label.setText("Выберите строку в таблице")
 
     def init_ui(self):
