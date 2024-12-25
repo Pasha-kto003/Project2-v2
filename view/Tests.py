@@ -14,7 +14,7 @@ from sklearn.cluster import KMeans
 from view.ModalWindow import ImageInfoDialog
 
 
-class MyApplication(QWidget):
+class MyApplication(QWidget):              #запуск теста
     def __init__(self):
         super().__init__()
         style_sheet = """
